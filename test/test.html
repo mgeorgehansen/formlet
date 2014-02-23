@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html class="no-js">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Test</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="stylesheet" href="css/app.css">
+
+        <script src="../bower_components/requirejs/require.js" data-main="js/main"></script>
+    </head>
+
+    <body>
+        <form id="form1">
+            <fieldset class="formlet_options-with-other" data-formlet="OptionsWithOther">
+                <fieldset class="formlet_options-with-other--options" data-formlet-field="option">
+                    <input name="option" type="radio" />
+                    <input name="option" type="radio" />
+                    <input name="option" type="radio" />
+                    <input name="option" type="radio" />
+                    <input name="option" type="radio" />
+                </fieldset>
+
+                <fieldset class="formlet_options-with-other--other" data-formlet-field="text">
+                    <input name="other" type="text" />
+                </fieldset>
+            </fieldset>
+
+            <div class="form--actions">
+                <button type="submit">
+                    Submit
+                </button>
+            </div>
+        </form>
+
+        <div id="messages" class="messages"></div>
+    </body>
+</html>

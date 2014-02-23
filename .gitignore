@@ -1,0 +1,7 @@
+# Ignore automatically-fetched dependencies.
+bower_components/
+node_modules/
+
+# Ignore generated files and folders.
+dist/
+test/js/

@@ -1,0 +1,21 @@
+{
+  "name": "fieldlet",
+  "version": "0.0.1",
+  "authors": [
+    "M. George Hansen <technopolitica@gmail.com>"
+  ],
+  "description": "A Javascript library that provides convienent abstractions over HTML forms for capturing common constructs and idioms",
+  "main": "src/formlet.coffee",
+  "license": "MPL-2.0",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test"
+  ],
+  "devDependencies": {
+    "jquery": "~2.1",
+    "requirejs": "git://github.com/jrburke/requirejs#2.1.8"
+  }
+}
