@@ -226,7 +226,7 @@ factory = ->
 do (root = this, factory) ->
   if (typeof define == 'function') and define.amd
     # AMD. Register as an anonymous module.
-    define [], (formlet) ->
+    define [], ->
       root.formlet = factory()
   else if typeof exports == 'object'
     # Node. Does not work with strict CommonJS, but
