@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-define ['jquery', 'formlet'], ($, Formlet) ->
+define ['jquery', 'formlet', 'formlet.core'], ($, Formlet) ->
   $messages = $ '#messages'
   $formElement = $ '#form1'
 
@@ -26,30 +26,34 @@ define ['jquery', 'formlet'], ($, Formlet) ->
 
   $optionFieldElement = $formElement.find '[data-formlet-field=option]'
   $optionElements = $optionFieldElement.find 'input[type=radio]'
-  optionField = new Formlet.OptionField(
-    $optionFieldElement.get(0)
-    , $optionElements.toArray()
+  optionField = Formlet.constructField(
+    'Option'
+    , $optionFieldElement.get(0)
     , []
+    , $optionElements.toArray()
     )
 
   $otherFieldElement = $formElement.find '[data-formlet-field=text]'
   $otherInputElement = $otherFieldElement.find 'input[type=text]'
-  otherField = new Formlet.TextField(
-    $otherFieldElement.get(0)
-    , $otherInputElement.get(0)
+  otherField = Formlet.constructField(
+    'Text'
+    , $otherFieldElement.get(0)
     , [
-        new Formlet.RegexFieldValidator(
-          /^[1-9]?[0-9]+$/
+        Formlet.constructFieldValidator(
+          'Regex'
+          , /^[1-9]?[0-9]+$/
           , 'You must enter a number'
           )
       ]
+    , $otherInputElement.get(0)
     )
 
   $formletElement = $formElement.find '[data-formlet]'
-  formlet = new Formlet.OptionsWithOtherFormlet(
-    $formletElement.get(0)
-    , optionField
-    , otherField
+  formlet = Formlet.constructFormlet(
+    'OptionsWithOther'
+    , $formletElement.get(0)
+    , [optionField, otherField]
+    , []
     )
 
   form = new Formlet.Form($formElement.get(0), [ formlet ])

@@ -28,21 +28,7 @@ factory = ->
       [].concat.apply([], results)
 
   class Formlet
-    @_registeredFormletTypes: {}
-
-    @registeredFormletTypes: =>
-      copy = {}
-      for ft, ts of @_regiseredFormletTypes
-        copy.set ts, ft
-      copy
-
-    @registerFormletType: (typeString, formletType) =>
-      @_registeredFormletTypes[typeString] = formletType
-
-    @formletType: (typeString) =>
-      @_registeredFormletTypes[typeString]
-
-    constructor: (@_type, @_element, @_fields, @_childFormlets) ->
+    constructor: (@_formletType, @_element, @_fields, @_childFormlets) ->
       ###
       Construct a new formlet instance.
 
@@ -70,44 +56,10 @@ factory = ->
 
       validationResults
 
-    type: ->
-      @_type
-
-  class OptionsWithOtherFormlet extends Formlet
-    constructor: (\
-        element
-        , @_optionField
-        , @_otherField
-        , @_message = 'Please select an option or enter another value'
-        ) ->
-      fields = [@_optionField, @_otherField]
-      super 'OptionsWithOther', element, fields, []
-
-    validate: ->
-      checkedOptions = (
-        opt for opt in @_optionField.optionElements() when opt.checked)
-      otherValue = @_otherField.inputElement().value.trim()
-
-      isOptionChecked = checkedOptions.length > 0
-      isOtherFilled = otherValue != ''
-      isValid = (isOptionChecked and !isOtherFilled) or
-                (!isOptionChecked and isOtherFilled)
-      message = if isValid then null else @_message
-      result = new ValidationResult(@element(), isValid, message)
-
-      # Only run additional validators on the other field if it is filled.
-      results = if isValid && isOtherFilled then super().concat [result] else
-        [result]
+    formletType: ->
+      @_formletType
 
   class Field
-    @_fieldTypes: {}
-
-    @fieldTypes: =>
-      @_fieldTypes
-
-    @registerFieldType: (typeString, fieldType) =>
-      @_fieldTypes[typeString] = fieldType
-
     constructor: (@_fieldType, @_element, @_validators) ->
       ###
       Construct a new field instance.
@@ -119,36 +71,34 @@ factory = ->
         validate this field.
       ###
 
-    fieldType: ->
-      @_fieldType
-
     element: ->
       @_element
+
+    fieldType: ->
+      @_fieldType
 
     validate: ->
       results = (v.validateField(this) for v in @_validators)
 
   class TextField extends Field
     @fieldType: ->
-      'text'
+      'Text'
 
-    constructor: (element, @_inputElement, validators) ->
+    constructor: (element, validators, @_inputElement) ->
       super TextField.fieldType(), element, validators
 
     inputElement: ->
       @_inputElement
-  Field.registerFieldType TextField.fieldType(), TextField
 
   class OptionField extends Field
     @fieldType: ->
-      'option'
+      'Option'
 
-    constructor: (element, @_optionElements, validators) ->
+    constructor: (element, validators, @_optionElements) ->
       super OptionField.fieldType(), element, validators
 
     optionElements: ->
       @_optionElements
-  Field.registerFieldType OptionField.fieldType(), OptionField
 
   class ValidationResult
     constructor: (@_target, @_isValid, @_message = null) ->
@@ -163,65 +113,141 @@ factory = ->
       @_message
 
   class FieldValidator
-    constructor: (acceptedFieldTypes) ->
-      @_acceptedFieldTypes = acceptedFieldTypes || Field.fieldTypes()
+    fieldValidatorType: ->
+      @_fieldValidatorType
+
+    constructor: (\
+        @_fieldValidatorType
+        , @_acceptedFieldTypes = Field.fieldTypes()
+        ) ->
 
     validateField: (field) ->
       if field.fieldType() not in @_acceptedFieldTypes
         throw new Error(
-          "Field of type #{field.fieldType()} is not supported by this " +
-          'validator'
+          """
+          Field of type '#{field.fieldType()}' is not supported by this
+          validator
+          """
           )
 
-  class RequiredFieldValidator extends FieldValidator
+  class Plugin
     constructor: (\
-        @_emptyValue = ''
-        , @_message = 'This field is required'
+        @_name
+        , @_extensionMethods = {}
+        , @_formletClasses = []
+        , @_fieldValidatorClasses = []
         ) ->
-      super ['text', 'radio', 'select']
 
-    validateField: (field) ->
-      super field
+    name: ->
+      @_name
 
-      element = field.element()
-      value = element.value.trim()
-      isEmpty = false
-      if @_emptyValue instanceof RegExp
-        isEmpty = @_emptyValue.test value
-      else
-        isEmpty = value == @_emptyValue
+    extensionMethods: ->
+      @_extensionMethods
 
-      new ValidationResult(element, !isEmpty, @_message)
+    formletClasses: ->
+      @_formletClasses
 
-  class RegexFieldValidator extends FieldValidator
-    constructor: (\
-        @_regexp
-        , @_message = 'Field does not match expected pattern'
-        ) ->
-      super ['text']
+    fieldValidatorClasses: ->
+      @_fieldValidatorClasses
 
-    validateField: (field) ->
-      super field
-
-      inputElement = field.inputElement()
-      value = inputElement.value.trim()
-      isValid = @_regexp.test value
-      message = if isValid then null else @_message
-
-      new ValidationResult(field.element(), isValid, message)
-
-  return {
+  definition =
     Form: Form
     Formlet: Formlet
-    OptionsWithOtherFormlet: OptionsWithOtherFormlet
     Field: Field
-    TextField: TextField
-    OptionField: OptionField
     ValidationResult: ValidationResult
     FieldValidator: FieldValidator
-    RequiredFieldValidator: RequiredFieldValidator
-    RegexFieldValidator: RegexFieldValidator
-  }
+    Plugin: Plugin
+
+    _fieldClasses: {}
+    _formletClasses: {}
+    _fieldValidatorClasses: {}
+    _plugins: {}
+
+    constructField: (fieldType, element, validators, args...) ->
+      unless fieldType of @_fieldClasses
+        throw new Error("Unknown field type '#{fieldType}'")
+      new @_fieldClasses[fieldType](element, validators, args...)
+
+    constructFormlet: (formletType, element, fields, childFormlets, options) ->
+      unless formletType of @_formletClasses
+        throw new Error("No registered formlet class for '#{formletType}'")
+      new @_formletClasses[formletType](
+        element
+        , fields
+        , childFormlets
+        , options
+        )
+
+    constructFieldValidator: (fieldValidatorType, args...) ->
+      unless fieldValidatorType of @_fieldValidatorClasses
+        throw new Error(
+          """
+          No registered field validator class for '#{fieldValidatorType}'
+          """
+          )
+      new @_fieldValidatorClasses[fieldValidatorType](args...)
+
+    registerPlugin: (plugin) ->
+      pluginName = plugin.name()
+      if pluginName of @_plugins
+        throw new Error(
+          """
+          Plugin with name '#{pluginName}' is already registered
+          """
+          )
+      @_plugins[pluginName] = plugin
+      @_registerExtensionMethod(m) for m in plugin.extensionMethods()
+      @_registerFormletClass(f) for f in plugin.formletClasses()
+      @_registerFieldValidatorClass(fv) for fv in \
+        plugin.fieldValidatorClasses()
+
+    utils:
+      extend: ->
+        result = {}
+        for arg in arguments
+          result[key] = val for key, val of arg when arg.hasOwnProperty(key)
+        result
+
+    _registerExtensionMethod: (methodName, method) ->
+      if methodName of this
+        throw new Error(
+          """
+          Formlet plugin extension method '#{methodName}' for plugin
+          '#{plugin.name()}' would overwrite existing method
+          """
+          )
+      @[methodName] = method.bind this
+
+    _registerFieldClass: (fieldClass) ->
+      fieldType = fieldClass.fieldType()
+      if fieldType of @_fieldClasses
+        throw new Error("Field type '#{fieldType}' is already registered")
+      @_fieldClasses[fieldType] = fieldClass
+
+    _registerFormletClass: (formletClass) ->
+      formletType = formletClass.formletType()
+      if formletType of @_formletClasses
+        throw new Error(
+          """
+          Formlet type '#{formletType}' is already registered
+          """
+          )
+      @_formletClasses[formletType] = formletClass
+
+    _registerFieldValidatorClass: (fieldValidatorClass) ->
+      fieldValidatorType = fieldValidatorClass.fieldValidatorType()
+      if fieldValidatorType of @_fieldValidatorClasses
+        throw new Error(
+          """
+          Field validator type '#{fieldValidatorType}' is already registered
+          """
+          )
+      @_fieldValidatorClasses[fieldValidatorType] = fieldValidatorClass
+
+  definition._registerFieldClass(TextField)
+  definition._registerFieldClass(OptionField)
+
+  definition
 
 do (root = this, factory) ->
   if (typeof define == 'function') and define.amd

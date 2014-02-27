@@ -7,5 +7,6 @@ requirejs.config
   paths:
     jquery: '../../bower_components/jquery/dist/jquery'
     formlet: '../../dist/formlet'
+    'formlet.core': '../../dist/formlet.core'
 
 require ['app'], ->

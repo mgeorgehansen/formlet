@@ -1,6 +1,6 @@
 {
   "name": "formlet",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "M. George Hansen <technopolitica@gmail.com>",
   "description": "A Javascript library that provides convienent abstractions over HTML forms for capturing common constructs and idioms",
   "devDependencies": {
